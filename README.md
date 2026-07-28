@@ -1,7 +1,13 @@
 # Representation Convergence — Full Project Guide (English)
 
-This document consolidates the entire discussion into an English, step-by-step
-plan, with the expected response/output attached to each step.
+A scientific experiment on representation convergence, carried through to a
+deployed engineering artifact. This document is the map: hypothesis, every
+stage as executed, results, decisions, and where each deliverable lives.
+
+**Status: complete.** Both experiments ran to completion on Google Colab (T4);
+the adapter is exported as a Core ML package; the two-tier pipeline is
+demonstrated end-to-end. Total compute for the scientific core: under one
+GPU-hour.
 
 ---
 
@@ -18,137 +24,180 @@ model without training?
   same content in different coordinate systems (Git Re-Basin, CKA studies,
   Platonic Representation Hypothesis, vec2vec).
 
-**Hypothesis to prove:** Well-trained independent models share representations
-up to a linear transformation.
+**Hypothesis proven:** Well-trained independent models share representations
+up to a linear transformation. Each word carries weight — *well-trained*
+(hence the random-weights control), *independent* (no shared lineage), and
+*up to linear* (strong enough to undo rotations and permutations, too weak to
+fabricate absent information).
 
-**Related prior work (our experiment reproduces these at small scale):**
+**Related prior work (this project reproduces these at small scale):**
 - Kornblith et al. 2019 — Linear CKA, layer-vs-layer similarity matrices
 - Bansal, Nakkiran & Barak 2021 — model stitching, "stitching penalty"
-- Huh et al. 2024 — Platonic Representation Hypothesis
+- Huh et al. 2024 — Platonic Representation Hypothesis (see report Appendix A)
 - vec2vec 2025 — unsupervised translation between embedding spaces
+- Text-to-Concept 2023, Drift-Adapter 2025 — closest engineering precedents
 
 ---
 
 ## 2. Experiment A — Scientific Proof (GPT-2 vs Pythia-160M)
 
-Folder: `convergence/`
-Models chosen deliberately from different labs, architectures, and datasets
-(OpenAI/WebText vs EleutherAI/The Pile) so any similarity is non-trivial.
+Notebooks: `A1`–`A3`. Models chosen deliberately from different labs,
+architectures, tokenizers, and datasets (OpenAI/WebText vs EleutherAI/The
+Pile), both trained from scratch, so any similarity is non-trivial.
 
-### Step A1 — Extract activations (`1_extract_activations.py`)
-Run the same 2,000 WikiText sentences through both models; save mean-pooled
-hidden states from every layer. Also extract a random-weights Pythia as a
-control baseline.
+### Step A1 — Extract activations (`A1_extract_activations.ipynb`)
+Runs the same **10,000 WikiText passages** through both models; saves
+mean-pooled hidden states from every layer. Also extracts a **seeded**
+random-weights Pythia as the control baseline.
 
-**Expected response/output:** `activations.npz` containing
-`A_layers [L_A, N, d_A]`, `B_layers [L_B, N, d_B]`, `R_layers` (random
-baseline). Console prints extraction progress. Runtime ~2–5 min on GPU.
+**Why 10,000 and why the train split:** A3 fits a 768×768 map (~590K
+parameters) per layer pair. At ~1,200 rows that is 1.6 samples/dimension, and
+starved ridge regression returns *systematically pessimistic* R², not noisier
+R². The validation split holds only ~1,646 passages over 100 characters; the
+train split is the same Wikipedia corpus, and since nothing is trained here
+(models are frozen; text is only probe stimuli) no evaluation hygiene is
+affected — A3 holds out its own 25%.
 
-### Step A2 — CKA analysis (`2_cka_analysis.py`)
-Compute Linear CKA between every layer pair (invariant to rotation/scaling —
-exactly the invariance the hypothesis requires).
+**Code hardening applied after review** (seven issues; see the notebook's
+review-notes cell): loud failure if the corpus under-delivers samples, seeded
+control, single-pass concatenation instead of O(n²) copying, streamed corpus
+loading, GPU cleanup for the control model, shape/row-alignment assertions,
+and reporting of which corpus was actually used.
 
-**Expected response/output:** `cka_matrix.png` with two panels.
-- Hypothesis supported: left panel (trained vs trained) shows a hot diagonal
-  (early↔early, mid↔mid layers similar); right panel (trained vs random) is
-  uniformly cold.
-- Hypothesis rejected: both panels look like structureless noise.
-Console prints mean/diagonal/max CKA for both comparisons.
+**Expected output:** `activations.npz` with `A_layers [13, 10000, 768]`,
+`B_layers`, `R_layers`. Runtime ~15 min on a T4. *Set `DATA_DIR` to a Drive
+path first — a new Colab notebook is a new VM.*
 
-### Step A3 — Linear stitching (`3_stitching.py`)
-Fit one ridge-regression matrix per matched layer pair (closed form, no model
-training) mapping A's space into B's; measure held-out R².
+### Step A2 — CKA analysis (`A2_cka_analysis.ipynb`)
+Linear CKA between every layer pair — invariant to rotation, scaling and
+permutation, exactly the invariance the hypothesis requires.
 
-**Expected response/output:** `stitching_r2.png` — trained curve vs random
-baseline curve with a 0.7 threshold line; console table of per-layer R².
+**Expected output:** `cka_matrix.png`, two panels. Hypothesis supported: left
+panel (trained vs trained) shows a hot diagonal band; right panel (trained vs
+random) is uniformly cold. Console prints mean/diagonal/max for both.
 
-### Success criteria (scientific)
+### Step A3 — Linear stitching (`A3_linear_stitching.ipynb`)
+One closed-form ridge matrix per matched layer pair mapping A's space into
+B's; held-out R².
+
+**Expected output:** `stitching_r2.png` — trained curve vs random baseline
+with the 0.7 threshold line; console table of per-layer R².
+
+### Success criteria (pre-registered)
 1. Diagonal CKA mean > 0.5 with random baseline < ~0.15 (≥3–4× gap)
 2. Stitching R² > 0.7 in middle layers (edges are tokenizer-specific and
    always lower)
-3. Task-level check: after linear translation, retrieval/classification on
-   translated representations retains ≥ ~90% of native performance — this
-   separates "statistical correlation" from "information actually transfers"
-
-### Interpretation of success
-- Scientific: models discover, not invent, representations; a shared
-  structure dictated by data/reality ("universal internal language").
-- Practical: a tiny linear map (thousands of parameters) suffices to
-  translate between models — enabling component swaps without retraining,
-  a shared embedding space, and a small-tier ↔ large-tier bridge.
-- What success does NOT mean: direct layer transplantation still fails;
-  R² = 0.8 loses 20% of variance, possibly the nuanced part — hence
-  criterion 3.
+3. Task-level check: after linear translation, retrieval retains ≥ ~90% of
+   native performance — separating "statistical correlation" from
+   "information actually transfers"
 
 ---
 
-## 3. Experiment B — Minimal Practical Application
-## (MobileCLIP → SigLIP 2 adapter, shared Qdrant index)
+## 3. Experiment B — Practical Application
+## (MobileCLIP-S1 → SigLIP 2 adapter, shared Qdrant index)
 
-Folder: `adapter/`
+Notebooks: `B1`–`B4` (core), `B5`–`B6` (validation & demo), `B7`–`B9`
+(quantization tests), `B10` (pair-free translation study).
+
 Goal: one linear matrix mapping iPhone-tier MobileCLIP-S1 image embeddings
 into server-tier SigLIP 2 space, so a **single Qdrant collection** serves both
-tiers: the phone indexes images offline, the server queries the same index
-with SigLIP text embeddings — no double indexing.
+tiers — the phone indexes images offline and privately, the server queries the
+same index with SigLIP text embeddings. No double indexing, no uploads.
 
-### Step B1 — Extract paired embeddings (`1_extract_pairs.py`)
-Same 4,000 Flickr30k images through both image encoders; also SigLIP text
-embeddings of the captions for evaluation.
+### Step B1 — Extract paired embeddings (`B1_extract_pairs.ipynb`)
+**4,000 COCO val2017 images** through both image encoders, plus SigLIP text
+embeddings of the captions for evaluation. *(Dataset note: the project began
+on Flickr30k, but HuggingFace deprecated script-based datasets mid-project and
+broke both Flickr sources; the fix was direct official COCO downloads.)*
 
-**Expected response/output:** `pairs.npz` with `mob_img`, `sig_img`,
-`sig_txt` (all L2-normalized). Runtime ~10 min on GPU.
+**Expected output:** `pairs.npz` with `mob_img` [4000, 512], `sig_img`,
+`sig_txt` [4000, 768], all L2-normalized. Sanity check: SigLIP image-caption
+diagonal cosine ≈ 0.15 — the expected band for sigmoid-loss models, whose
+absolute cosines are low by design. Runtime ~10 min on GPU.
 
-### Step B2 — Train the adapter (`2_train_adapter.py`)
+### Step B2 — Fit the adapter (`B2_train_adapter.ipynb`)
 Two closed-form variants: Ridge (full linear map) and Procrustes (pure
 rotation). If Procrustes ≈ Ridge, the spaces are identical up to rotation —
-the strongest form of the convergence claim.
+the strongest form of the convergence claim. A controlled MLP comparison
+(512→1024→768, GELU, cosine loss) tests whether non-linearity adds anything.
 
-**Expected response/output:** `adapter.npz`; console prints held-out R² and
-mean cosine-to-target for both variants. Runtime: seconds.
+**Expected output:** `adapter.npz`; console prints held-out R² and mean
+cosine-to-target per variant. Runtime: seconds (MLP: a few minutes).
 
-### Step B3 — Retrieval evaluation (`3_eval_retrieval.py`) — the real test
-Text→image retrieval on held-out images. Query = SigLIP text embedding
-(what the server does). Three galleries:
-- A. SigLIP native images → **ceiling**
-- B. MobileCLIP + adapter → **our system**
-- C. MobileCLIP raw, no adapter → **lower baseline** (expected ≈ 0)
+### Step B3 — Retrieval evaluation (`B3_eval_retrieval.ipynb`) — the real test
+Text→image retrieval on 1,000 held-out images. Query = SigLIP text embedding
+(what the server does). Three galleries: **A.** SigLIP native → ceiling;
+**B.** MobileCLIP + adapter → our system; **C.** MobileCLIP raw → lower
+baseline (expected ≈ chance).
 
-**Expected response/output:** console table of Recall@1/5/10 for A/B/C, plus
-"adapter keeps X% of ceiling → PASS / below target" per K.
-**Success:** variant B ≥ 90% of variant A's recall.
-**If below 90%:** upgrade the adapter to a small 1–2 layer MLP (minutes of
-training) and re-run this step.
+**Success:** variant B ≥ 90% of variant A's recall. **If 70–90%:** upgrade the
+adapter and re-run.
 
-### Step B4 — iOS export (`4_export_mobile.py`)
-**Expected response/output:**
-- `adapter_fp16.npz` (~1 MB) — universal fallback, e.g. for MLX
-- `Adapter.mlpackage` — Core ML model (MatMul + L2-normalize, fp16,
-  iOS 16+, runs on the Neural Engine). Drag into Xcode; Swift auto-generates
-  a class with a single `prediction(mobileclip_embedding:)` call.
+### Step B4 — iOS export (`B4_export_coreml.ipynb`)
+**Expected output:** `adapter_fp16.npz` (~0.8 MB, universal fallback) and
+`Adapter.mlpackage` — Core ML, MatMul + L2-normalize, fp16, iOS 16+, runs on
+the Neural Engine.
 
-iPhone pipeline after success:
-`image → MobileCLIP encoder (Apple's official Core ML release) → Adapter.mlpackage → vector in SigLIP space → shared Qdrant collection`
+iPhone pipeline: `image → MobileCLIP (Apple's Core ML release) →
+Adapter.mlpackage → vector in SigLIP space → shared Qdrant collection`
+
+**Deployment constraint:** the adapter is calibrated to one exact
+preprocessing pipeline — bilinear resize 256, center-crop 256×256, and
+**identity normalization** (mean 0, std 1; MobileCLIP consumes raw [0,1]
+pixels, unlike standard CLIP). Substituting conventional CLIP normalization
+on device shifts every embedding and degrades retrieval silently.
+
+### Step B5 — Phone-pipeline sandbox (`B5_phone_pipeline_sandbox.ipynb`)
+Qualitative validation on ten images per gallery: the exact phone path in
+simulation (same MobileCLIP weights, adapter applied in fp16 exactly as Core
+ML computes it), free-text queries, compositional queries, negative controls,
+and an fp16-vs-fp32 parity check. Runtime ~4 min.
+
+### Step B6 — Interactive visual demo (`B6_visual_demo.ipynb`)
+The product loop with a user in it: a server gallery indexed natively, a
+user-uploaded photo indexed through the phone path and auto-captioned (BLIP),
+free-text search over the **one** shared index, top-3 results with per-tier
+probabilities, mobile-vs-server timing, and a printed flow log of every step.
+
+### Steps B7–B9 — Quantization tests (`*_quant_int8.ipynb`)
+Three separate decisions, each with pre-registered pass criteria: **B7**
+adapter → int8 (0.39 MB; expected pass but negligible saving), **B8** encoder
+→ int8 (~43 → ~21 MB; demonstrates the *quantize → refit W → revalidate*
+rule), **B9** index vectors → int8 (772 bytes/photo, 4× index memory, with
+fp32 top-20 rescoring). B7 and B9 need only the saved `.npz`; B8 re-encodes
+images (~6–8 min).
+
+### Step B10 — Pair-free translation study (`B10_vec2vec_demo.ipynb`)
+Tests the strongest form of the claim: translation with **no paired examples**
+(disjoint image sets per side), via Gromov-Wasserstein initialization plus
+CSLS self-learning, graded on 500 true held-out pairs. See results below and
+report Appendix B.
 
 ---
 
 ## 4. Run Order & Commands
 
+All stages are self-contained Colab notebooks. Each opens with a storage cell:
+mount Drive and set `DATA_DIR` so artifacts survive VM recycling.
+
+```
+Experiment A:  A1 → A2 → A3          (~15 min + seconds + seconds)
+Experiment B:  B1 → B2 → B3 → B4     (~10 min + seconds each)
+Validation:    B5 → B6               (~4 min + interactive)
+Optional:      B7, B8, B9, B10       (independent of each other)
+```
+
+Equivalent scripts are in `convergence/` and `adapter/` for non-notebook use:
+
 ```bash
-# Experiment A (scientific proof)
 cd convergence
 pip install torch transformers datasets numpy matplotlib scikit-learn
-python 1_extract_activations.py
-python 2_cka_analysis.py
-python 3_stitching.py
+python 1_extract_activations.py && python 2_cka_analysis.py && python 3_stitching.py
 
-# Experiment B (practical application)
 cd ../adapter
-pip install torch transformers open_clip_torch datasets pillow \
-            scikit-learn numpy coremltools
-python 1_extract_pairs.py
-python 2_train_adapter.py
-python 3_eval_retrieval.py
-python 4_export_mobile.py
+pip install torch transformers open_clip_torch pillow scikit-learn numpy coremltools
+python 1_extract_pairs.py && python 2_train_adapter.py
+python 3_eval_retrieval.py && python 4_export_mobile.py
 ```
 
 ## 5. Decision Gates
@@ -156,58 +205,90 @@ python 4_export_mobile.py
 | Gate | Condition | Next action |
 |---|---|---|
 | A passes | CKA + R² criteria met | Proceed to Experiment B |
-| A fails | No diagonal structure / R² low | Re-check extraction (pooling, layer alignment) before rejecting hypothesis |
-| B passes | Recall ≥ 90% of ceiling | Wire adapter into shared Qdrant collection; integrate mlpackage into iOS app |
-| B marginal | 70–90% of ceiling | Swap ridge for small MLP adapter, re-run B3 |
-| B fails | < 70% | Keep separate indexes per tier; revisit with larger MobileCLIP variant |
+| A fails | No diagonal structure / R² low | **Check statistical power first** (samples per dimension) before rejecting the hypothesis |
+| B passes | Recall ≥ 90% of ceiling | Wire adapter into shared Qdrant collection; integrate mlpackage into iOS |
+| B marginal | 70–90% of ceiling | Try a stronger adapter, re-run B3 |
+| B fails | < 70% | Keep separate indexes per tier; revisit with a larger MobileCLIP variant |
 
 ## 6. Possible Extensions
-- Scale Experiment A to Qwen2.5-0.5B vs SmolLM2-360M
-- Cross-modal version: SigLIP (vision) vs an LLM (text) on image–caption
-  pairs — a direct test of the Platonic Representation Hypothesis
-- Use the LLM's embedding as conditioning for an on-device image generator
-  via a small adapter, saving a separate text encoder in the phone tier
+
+- Scale Experiment A to Qwen2.5-0.5B vs SmolLM2-360M (a higher-capability
+  point on the PRH curve)
+- **Partly done:** cross-modal convergence — Experiment B is the vision-vision
+  instance; B10 attempted the pair-free version
+- Same-dimensional Procrustes, and teacher vs its own distilled student, to
+  discriminate the anisotropy interpretations in report §4.4
+- MobileCLIP2 / MobileCLIP-B upgrade path — the one-layer 512-d bottleneck is
+  the predicted source of the residual R@1 gap; a refit takes seconds
+- Use the LLM's embedding as conditioning for an on-device image generator via
+  a small adapter, saving a separate text encoder in the phone tier
 
 ## 7. Final Results (as executed, July 2026)
 
-Both experiments were run to completion on Google Colab (T4). Verbatim
-outcomes:
-
-**Experiment A** — Run 1 (1,646 validation samples) fell below the
-stitching criterion (mean R2 0.434, peak 0.552; random baseline −0.773)
-due to sample starvation (1.6 samples per input dimension). Run 2
-(10,000 train-split samples, identical pipeline) passed decisively:
+**Experiment A** — Run 1 (1,646 validation samples) fell below the stitching
+criterion (mean R² 0.434, peak 0.552; random baseline −0.773) due to sample
+starvation (1.6 samples per input dimension). Run 2 (10,000 train-split
+samples, identical pipeline) passed decisively:
 
 | Metric | Run 1 | Run 2 (final) |
 |---|---|---|
 | CKA trained mean / diagonal / max | 0.365 / 0.433 / 0.727 | 0.359 / 0.424 / 0.744 |
 | CKA random mean / max | 0.087 / 0.339 | 0.067 / 0.299 |
-| Stitching R2 mean (trained) | 0.434 | **0.737** |
-| Stitching R2 peak (L11) | 0.552 | **0.797** |
-| Stitching R2 mean (random) | −0.773 | 0.173 |
+| Stitching R² mean (trained) | 0.434 | **0.737** |
+| Stitching R² peak (L11) | 0.552 | **0.797** |
+| Stitching R² mean (random) | −0.773 | 0.173 |
 | Verdict vs pre-registered criteria | below target | **PASS** |
 
-**Experiment B** — 4,000 COCO pairs; SigLIP sanity diagonal cosine
-0.150 (expected band for sigmoid-loss models).
+The structural signature matters as much as the values: the trained curve
+*rises* with depth (0.59 → 0.80) while the random control *decays*
+(0.38 → 0.09) — opposite slopes, an 8× gap at L11.
+
+**Experiment B** — 4,000 COCO pairs; SigLIP sanity diagonal cosine 0.150.
 
 | Result | Value |
 |---|---|
-| Ridge adapter: held-out R2 / mean cosine | 0.592 / **0.900** |
-| Procrustes (rotation only): R2 | 0.038 (anisotropy mismatch) |
+| Ridge adapter: held-out R² / mean cosine | 0.592 / **0.900** |
+| Procrustes (rotation only): R² | 0.038 (anisotropy mismatch, not just orientation) |
 | MLP adapter: best cosine | 0.903 (+0.003 → relationship is linear) |
 | Retrieval R@1 / R@5 / R@10 (ceiling) | 0.630 / 0.885 / 0.944 |
 | Retrieval with linear adapter | 0.557 / 0.843 / 0.918 |
 | As % of ceiling | 88.4% / **95.3%** / **97.2%** |
 | Raw cross-space baseline | 0.001 / 0.005 / 0.010 (exact chance) |
 | Deployed artifact | Adapter.mlpackage, 0.79 MB fp16, iOS 16+ |
-| B5 sandbox (qualitative) | positive/compositional/negative queries correct across two galleries; fp16 ranking-neutral (min cosine 0.9999999) |
-| B6 demo (interactive) | user photo phone-path-indexed in 39ms, auto-captioned, retrieved at rank 1 in a mixed-tier ranking; search 0.08ms local vs 150ms simulated server RTT |
-| B6 live demo (interactive) | user photo indexed via phone path in 39 ms, retrieved at rank 1 in a mixed-tier result list; local search 0.08 ms vs 150 ms simulated network round-trip |
+| B5 sandbox (qualitative) | positive / compositional / negative queries correct across two galleries; fp16 ranking-neutral (min cosine 0.9999999) |
+| B6 demo (interactive) | user photo phone-path-indexed in 39 ms, auto-captioned, retrieved at rank 1 in a mixed-tier list (MOBILE 91.3% / SERVER 5.0%); search 0.08 ms local vs 150 ms simulated server RTT |
+| B10 pair-free translation | distribution-level alignment recovered with **zero pairs** (cosine 0.395 vs 0.017 random floor, 23×); instance-level correspondence **not** recovered (R@1 at chance) — see Appendix B |
 
-**Decisions taken:** hypothesis confirmed in strong quantitative form
-(Exp A); linear adapter shipped — shared Qdrant collection is GO, with
-optional server-side top-10 re-rank for R@1-critical flows (Exp B).
-Full analysis, figures (including the CKA heatmap), and the honest
-novelty assessment are in Final_Project_Report.pdf; context and
-applications in Positioning_Impact_Applications.pdf; terminology in
-Technical_Cheat_Sheet.pdf.
+**Decisions taken:** hypothesis confirmed in strong quantitative form (Exp A);
+linear adapter shipped — shared Qdrant collection is GO, with optional
+server-side top-10 re-rank for R@1-critical flows (Exp B); adapter stays fp16
+(int8 saving negligible); encoder and index-vector int8 evaluated separately
+(B8/B9).
+
+## 8. Deliverables
+
+| File | Contents |
+|---|---|
+| `Final_Project_Report.pdf` (18 pp) | Full study: theory, both experiments, the two failure→fix narratives, honest novelty assessment, six challenges, Appendix A (Platonic Representation Hypothesis consolidated), Appendix B (pair-free translation study) |
+| `Blog_Post.pdf` (4 pp) | Narrative version for a general technical audience, with the live demo |
+| `Positioning_Impact_Applications.pdf` (4 pp) | Landscape of related work, honest uniqueness claim, eight applications, time/energy analysis |
+| `Technical_Cheat_Sheet.pdf` (7 pp) | Glossary, model profiles, inside MobileCLIP-S1, the preprocessing trap, methods with formulas |
+| `B5_Sandbox_Practical_Report.pdf` (5 pp) | Per-query sandbox analysis, three demo screenshots, verbatim flow log, practical uses, suggested visualizations |
+| Hebrew editions | `Final_Project_Report_HE.pdf`, `Blog_Post_HE.pdf`, `Positioning_Impact_Applications_HE.pdf` |
+| `notebooks/` | A1–A3, B1–B4, B5, B6, B7–B9 (quant), B10 — each self-contained with markdown, success criteria, and storage cell |
+| `convergence/`, `adapter/` | Equivalent standalone scripts |
+
+## 9. Key Lessons
+
+1. **Underpowered evaluation lies systematically, not randomly.** The run-1
+   failure produced plausible wrong conclusions and no error message. Check
+   samples-per-dimension before believing a negative result.
+2. **Baselines convert numbers into evidence.** Every figure here means
+   something only relative to its control — random weights, chance retrieval,
+   negative-control queries.
+3. **A failed stronger method is a measurement.** The MLP that gained +0.003
+   proved linearity; the pair-free translator that reached chance measured
+   where shape-only alignment stops.
+4. **Silent degradation is the dominant failure mode in deployment.** Sample
+   starvation, preprocessing mismatch, and un-refitted adapters after
+   quantization all fail quietly. Guardrails and parity checks, not vigilance.
