@@ -50,19 +50,10 @@ Runs the same **10,000 WikiText passages** through both models; saves
 mean-pooled hidden states from every layer. Also extracts a **seeded**
 random-weights Pythia as the control baseline.
 
-**Why 10,000 and why the train split:** A3 fits a 768×768 map (~590K
-parameters) per layer pair. At ~1,200 rows that is 1.6 samples/dimension, and
-starved ridge regression returns *systematically pessimistic* R², not noisier
-R². The validation split holds only ~1,646 passages over 100 characters; the
-train split is the same Wikipedia corpus, and since nothing is trained here
-(models are frozen; text is only probe stimuli) no evaluation hygiene is
-affected — A3 holds out its own 25%.
-
-**Code hardening applied after review** (seven issues; see the notebook's
-review-notes cell): loud failure if the corpus under-delivers samples, seeded
-control, single-pass concatenation instead of O(n²) copying, streamed corpus
-loading, GPU cleanup for the control model, shape/row-alignment assertions,
-and reporting of which corpus was actually used.
+Sample count matters: A3 fits a 768×768 map per layer pair, so 10,000
+passages (~10 per input dimension) are needed. Fewer samples produce
+misleadingly low R² — the notebook fails loudly rather than proceeding.
+Full reasoning in the report, §3.2.
 
 **Expected output:** `activations.npz` with `A_layers [13, 10000, 768]`,
 `B_layers`, `R_layers`. Runtime ~15 min on a T4. *Set `DATA_DIR` to a Drive
