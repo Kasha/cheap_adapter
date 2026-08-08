@@ -1,1 +1,2 @@
-tmp/*.npz
+tmp/
+*.npz
