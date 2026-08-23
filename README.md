@@ -4,7 +4,7 @@ A scientific experiment on representation convergence, carried through to a
 deployed engineering artifact. This document is the map: hypothesis, every
 stage as executed, results, decisions, and where each deliverable lives.
 
-**Status: complete — nine findings, eight falsified explanations.** What began as two experiments (A and B)
+**Status: complete — nine findings, nine falsified explanations, and the width cliff explained.** What began as two experiments (A and B)
 grew into seven series. Experiments A and B established that convergence is
 linear and deployable; series C, E, F, G then tested *how far* the claim goes —
 across modalities, across model scale, without any pairing at all, and finally
@@ -359,31 +359,49 @@ wider hub can only retain more. A hub tuned for portability cannot also be a
 lossless reconstruction medium: the third independent instance of the same
 tension.
 
-Both candidate explanations were tested and **both failed** (report C.13.11):
+**The cliff is now explained — it is a rank wall.** Eight accounts were
+tested. Seven failed, six of them the same way: each was *smooth* where the
+outcome is discontinuous. The eighth survived, and survived a prediction
+made before the measurement.
 
-- *Local-structure loss* — FALSIFIED. Across the cliff step, neighbourhood
-  preservation moves −0.018 and cross-encoder overlap −0.030, the same magnitude
-  as their moves elsewhere, while transfer drops 0.177 — six times more. Both
-  fall smoothly and monotonically across the whole sweep. A smooth predictor
-  cannot explain a discontinuous outcome.
-- *Spectral amplification* — FALSIFIED, by the same argument. The amplification
-  factor `1/√λ` rises 0.25 → 0.35 → 0.51 → 0.74 → 0.93 and its growth rate
-  *decelerates* at the cliff (1.45× per step before, 1.26× across it). Transfer
-  collapses precisely where amplification is slowing.
+The head is trained on `img_small`, which is **768-dimensional**, and the
+published cliff sits at 512 → 768. A d-dimensional source's ridge entry map
+is a d × W matrix, so its output spans at most **d** hub directions however
+large W becomes. Below width d the head sees every direction the hub has;
+above it the hub holds directions the source could never populate — and the
+*wider* encoders do populate them, so the head is handed coordinates it was
+never fitted on. That is an algebraic boundary, not a curve, which is
+exactly the shape all six smooth accounts lacked.
 
-The cliff is real, reproduced, and currently **unexplained**, and is reported as
-such rather than resolved by argument. One boundary: only one operationalisation
-was tested — the amplification applied to the *last* direction each width admits.
-Those alternatives have since been built and tested (K-series): accumulated
-noise energy, a noise-to-signal direction ratio, a condition number, and the
-fraction of hub directions shared by all encoders. **All four failed**, scoring
-0.62–0.80 on a pre-registered discontinuity standard where transfer itself
-scores 4.03 and the pass threshold is 3.0. Every one rises smoothly across the
-cliff. The shared-direction fraction is the most informative failure: it falls
-1.00 → 0.73 → 0.37 → 0.18 → 0.12 across the sweep, confirming that widening the
-hub admits increasingly *private* directions — a real mechanism, but a smooth
-one, so it cannot produce a discontinuity. Six explanations for the cliff have
-now been tested and all six falsified. It remains unexplained.
+**Predicted in advance, then measured:** each source cliffs at its own
+ambient dimension and nowhere earlier, and the location does not move with
+the head target. Six curves — three sources × two targets — and every one
+puts the largest drop exactly on the source's dimension: **768, 1536,
+2048**. DINOv2-large holds above 1.03 across nine consecutive widths from
+512 to 1920 before collapsing at 2048. Three further widths (1024, 1280,
+1792), none of them anybody's dimension, show nothing. At 1792 DINOv2-large
+reads 1.079 while DINOv2-base reads 0.098 — same hub width, opposite state,
+differing only in source dimension.
+
+**The mechanism was then measured directly**, not inferred from location:
+the source spans only ~768 of 1024 hub directions, the head's weight mass
+beyond 768 is near zero, the wider encoders put real variance there, and
+zeroing exactly those directions restores transfer.
+
+Three consequences, and they matter more than the cliff:
+
+1. **512 was never a tuned operating point.** Any width up to the source
+   encoder's dimension works, nothing above it can. The rule is
+   `hub_width ≤ dim(source encoder)` — stated, not swept for.
+2. **The portability/losslessness tension is narrower than reported.** It
+   exists because the head was fitted on the *narrowest* encoder in the
+   set. Train it on `img_large` and the ceiling is 2048.
+3. **The meta-finding drops from three instances to two.** The first two
+   are about isotropy; this one is about rank. They are not the same
+   property.
+
+Scope: one hub protocol, one image corpus, three source encoders of one
+family, two head targets. Full account in Appendix E.8.
 
 - **G2** — live demo: real COCO images, URL / upload / local path input, GPU
   used only for the fresh forward pass (the hub itself is a CPU linear solve).
@@ -561,13 +579,14 @@ jointly-trained ceiling's 1.41.
 | 8 | One shared space, used | hub transfer 93–96% of native on unseen encoders | C.13 |
 | 9 | The mechanism predicts | pre-registered ladder, rank-corr +1.00 | C.14 |
 
-**Plus a recurring meta-finding, measured three times independently:** isotropy
-helps when *reading* a correspondence, hurts when *finding* one (C.12), and
-hurts again when *carrying* several spaces at once (the C.13 width cliff). The
-same geometric property, three opposite prescriptions — a property of shared
-linear coordinates as such, not of any one experiment. *Note the third instance
-is an observed trade-off, not a mechanism:* the amplification account of the
-cliff was tested and falsified in C.13.11.
+**Plus a recurring meta-finding, measured twice independently:** isotropy
+helps when *reading* a correspondence and hurts when *finding* one (C.11 vs
+C.12). The same geometric property, opposite prescriptions — a property of
+shared linear coordinates as such, not of any one experiment.
+
+*This count was corrected downward.* The width cliff was previously listed as
+a third instance. It is not: the first two are about isotropy, the cliff is
+about rank (Appendix E.8). Two independent instances, not three.
 
 **And a fourth instance of the C.11 rescue:** G7 found the hub repairing
 degenerate coordinate frames exactly as explicit whitening (C.11) and the
@@ -586,7 +605,7 @@ directions with it can reach almost none of it. Same conclusion as the CCA
 measurement (6 of 64 cross-modal) and the composition results, from the
 geometry of the shared space itself. Reported in Appendix E.6.
 
-### 7.4 The falsification ledger — eight, two of them the project's own
+### 7.4 The falsification ledger — nine, two of them the project's own
 
 A gate that never fires is decoration; an explanation never withdrawn is
 decoration too. Each of these was proposed, tested, and recorded as false rather
@@ -601,9 +620,10 @@ than quietly dropped.
 | 5 | The ratio-to-chance decline shows agreement is local | **PARTLY THE PROJECT'S OWN** — normalisation artifact; ratio is bounded by N/k, and chance-corrected agreement *peaks* at k ≈ 20–50 | C.13.9 |
 | 6 | The width cliff is local-structure loss | FALSIFIED — smooth predictor (−0.018 / −0.030), discontinuous outcome (−0.177) | C.13.11 |
 | 7 | The width cliff is spectral amplification | **THE PROJECT'S OWN PREFERRED ACCOUNT** — FALSIFIED; 1/√λ decelerates across the cliff, 1.45× → 1.26× | C.13.11 |
-| 8 | Four further cliff statistics: accumulated noise energy, noise/signal direction ratio, condition number, shared-direction fraction | ALL FALSIFIED — D of 0.62–0.80 against transfer's 4.03 on a pre-registered discontinuity standard | K-series |
+| 8 | Four further cliff statistics: accumulated noise energy, noise/signal direction ratio, condition number, shared-direction fraction | ALL FALSIFIED — D of 0.39–0.88 against transfer's 4.03 on a pre-registered discontinuity standard; each smooth where the outcome is discontinuous | E.3 |
+| 9 | The cliff sits at the head *target's* dimension | FALSIFIED by a wrong prediction, not by wrong shape — the location does not move between bge (1024-d) and SBERT (768-d) | E.3 |
 
-Two of the eight were this project's own explanations, and #5 retracts an
+Two of the nine were this project's own explanations, and #5 retracts an
 argument the report had already published. The local-over-global conclusion
 survives on CKNNA — 21 of 21 pairs higher locally than at the global limit — plus
 two further independent lines; one of four arguments was faulty and has been
