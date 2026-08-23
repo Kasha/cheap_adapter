@@ -4,11 +4,13 @@ A scientific experiment on representation convergence, carried through to a
 deployed engineering artifact. This document is the map: hypothesis, every
 stage as executed, results, decisions, and where each deliverable lives.
 
-**Status: complete — nine findings.** What began as two experiments (A and B)
+**Status: complete — nine findings, eight falsified explanations.** What began as two experiments (A and B)
 grew into seven series. Experiments A and B established that convergence is
 linear and deployable; series C, E, F, G then tested *how far* the claim goes —
 across modalities, across model scale, without any pairing at all, and finally
-into a single shared coordinate system serving five encoders at once. Series H
+into a single shared coordinate system serving seven encoders at once, then
+characterised as a manifold and probed for what the hub does and does not do.
+Series H
 and V are tooling that certify the measurements.
 
 All experiments ran on Google Colab (T4/L4); the adapter is exported as a Core
@@ -329,7 +331,7 @@ FIND an unknown one.** Cosine retrieval treats uneven variance as noise;
 shape-matching treats it as the signal that makes a point distinctive.
 (Report C.12.)
 
-### Series G — the shared hub (`G1`–`G3`)
+### Series G — the shared hub (`G1`–`G7`)
 
 Five cached spaces over the same 9,533 images — DINOv2 small/base/large,
 bge-m3, GPT-2 — each given **one** linear map into a single 512-d whitened-PCA
@@ -348,18 +350,112 @@ memorised the task could not produce. This is a working system assembled from
 parts that never trained together — the shared representation demonstrated by
 use rather than by correlation. (Report C.13.)
 
-**The honest catch, measured:** hub width forces a choice. Narrow (512) and
-components transfer; wide (1024+) and transfer collapses to chance while
-reconstruction improves, because whitened PCA amplifies noise-dominated tail
-directions. A hub tuned for portability cannot also be a lossless
-reconstruction medium — the third independent instance of the same tension.
+**The honest catch, measured — and unexplained.** Hub width forces a choice.
+Zero-shot transfer runs **0.350 / 0.435 / 0.474 / 0.489 / 0.312** across widths
+64 → 768: a **−0.177** step at 512→768 against steps of +0.085, +0.039, +0.015
+before it. Reconstruction plateaus (0.325 / 0.382 / 0.412 / 0.420 / 0.411) and
+cannot cliff by construction — feeding an encoder its own coordinates through a
+wider hub can only retain more. A hub tuned for portability cannot also be a
+lossless reconstruction medium: the third independent instance of the same
+tension.
+
+Both candidate explanations were tested and **both failed** (report C.13.11):
+
+- *Local-structure loss* — FALSIFIED. Across the cliff step, neighbourhood
+  preservation moves −0.018 and cross-encoder overlap −0.030, the same magnitude
+  as their moves elsewhere, while transfer drops 0.177 — six times more. Both
+  fall smoothly and monotonically across the whole sweep. A smooth predictor
+  cannot explain a discontinuous outcome.
+- *Spectral amplification* — FALSIFIED, by the same argument. The amplification
+  factor `1/√λ` rises 0.25 → 0.35 → 0.51 → 0.74 → 0.93 and its growth rate
+  *decelerates* at the cliff (1.45× per step before, 1.26× across it). Transfer
+  collapses precisely where amplification is slowing.
+
+The cliff is real, reproduced, and currently **unexplained**, and is reported as
+such rather than resolved by argument. One boundary: only one operationalisation
+was tested — the amplification applied to the *last* direction each width admits.
+Those alternatives have since been built and tested (K-series): accumulated
+noise energy, a noise-to-signal direction ratio, a condition number, and the
+fraction of hub directions shared by all encoders. **All four failed**, scoring
+0.62–0.80 on a pre-registered discontinuity standard where transfer itself
+scores 4.03 and the pass threshold is 3.0. Every one rises smoothly across the
+cliff. The shared-direction fraction is the most informative failure: it falls
+1.00 → 0.73 → 0.37 → 0.18 → 0.12 across the sweep, confirming that widening the
+hub admits increasingly *private* directions — a real mechanism, but a smooth
+one, so it cannot produce a discontinuity. Six explanations for the cliff have
+now been tested and all six falsified. It remains unexplained.
 
 - **G2** — live demo: real COCO images, URL / upload / local path input, GPU
   used only for the fresh forward pass (the hub itself is a CPU linear solve).
 - **G3** — generalised suite: register any N encoders and get a per-pair
   agreement matrix, controls, and a stated verdict against pre-registered
   gates. The metric is target-free and symmetric, so it works for any mix of
-  modalities.
+  modalities. 42 of 42 ordered pairs SHARED, mean retention 103.6% against hubs
+  built for each pair alone; control at chance (0.004 vs 0.001).
+- **G4 — cross-lineage transfer.** SigLIP 2, an independent lineage with no
+  DINOv2 ancestry, retains **94.2%** of a head fitted natively on it — inside
+  the 93.8–96.5% within-family band, control at chance. Two limits stated with
+  it: this is cross-lineage but not simultaneously cross-objective, and SigLIP 2
+  is still a transformer. **A convolutional encoder has now been tested**
+  (K-series, Aug 2026): ConvNeXt-base (ImageNet-22k) reaches **87.5%** of
+  native against SigLIP 2's **86.4%** measured on the same rebuilt head.
+  That head runs ~7.8 points low against the published protocol (SigLIP's
+  original figure is 94.2%), and the cause is known rather than merely
+  noted: the original hub used **four** spaces (DINOv2 ×3 + bge-m3) with
+  per-space scaling, a random eval split, bge targets and alpha 1e-2, where
+  the reconstruction used seven raw spaces, a sequential split, SBERT
+  targets and alpha 1.0. So absolute values are not comparable to C.13.2 — but the *ordering* is, and a convnet sits at or above an encoder
+  already known to be in-band. **Architecture does not bound the claim.**
+  The confound survives: ConvNeXt is supervised where DINOv2 is
+  self-supervised, so architecture and objective move together, and given
+  C.13.5 ranks objective above lineage above modality, objective is the
+  more likely of the two. The honest form is "no encoder tested falls
+  outside the band", not "architecture is irrelevant".
+- **G5 — the scale of agreement.** Neighbourhood overlap across all 21 pairs,
+  k = 1…500. Agreement is **local**; global structure diverges. What explains it
+  (exploratory): objective (+53×) > lineage (+44×) > modality (+29×), with the
+  top pair bge–SBERT sharing an objective and no lineage. Permutation
+  calibration: the k-NN null is exactly k/N (already calibrated), but the CKA
+  null is +0.094 and *rises with width* — correcting it widens the
+  objective-over-lineage gap from +0.024 to +0.181. The confound had been
+  working against the finding.
+- **G6 — the manifold, characterised.** Three closed-form measurements that turn
+  two informal words into numbers. Intrinsic dimension (TwoNN): all seven spaces
+  sit between **11.2 and 19.9** dimensions inside ambient widths of 768–2048 —
+  under 3% of the storage in every case. Procrustes across all 21 pairs: mean
+  **0.194** vs ridge **0.667**, with cross-modal and GPT-2 pairs going *negative*
+  — "related, not rigid" confirmed broadly rather than from one case. CCA shared
+  directions (of 64): image siblings 64, same-objective text 64 (54 above 0.9),
+  cross-modal as few as **6**. All three place the pairs in the same order as
+  kNN overlap and rank correlation — a fourth and fifth independent route to the
+  same ranking. *Caveat:* the Procrustes values follow a common-PCA reduction and
+  are **not comparable** to Experiment B's raw 0.038.
+- **G7 — what the hub does to local structure.** The science says what encoders
+  share is local; the engineering is a global linear projection. G7 makes them
+  meet. The map is not gentle: mean native-neighbourhood preservation is
+  **0.594** at k=10 (GPT-2 worst at 0.257) — the projection reshapes local
+  structure rather than rotating it. Stratified by the collapse diagnostic, the
+  aggregate +0.111 splits into two different phenomena: on **healthy** spaces
+  (pair-cosine < 0.30) the hub is **NEUTRAL**, +0.010 over n=6 with two negative;
+  on pairs including a **degenerate** space it gains +0.151, with Spearman +0.82
+  between a pair's worst pair-cosine and its gain. So transfer runs on the
+  *global* linear component — real, if thin — which is why the hub works **and**
+  why it never reaches the ceiling. The large gains are the C.11 isotropy rescue
+  for the fourth independent time, not hub alignment, and must not be averaged
+  into the headline. *Bounds (now measured, K-series):* the healthy-pair null is **bounded, not
+  merely undetected**. A re-run on a rebuilt hub gives −0.010 against the
+  original +0.010, with a cluster-bootstrap 95% interval of −0.038 to +0.024
+  and a minimum detectable effect of 0.034 — inside the pre-registered
+  smallest-effect-of-interest of 0.050, so the design could have found an
+  effect that mattered and did not. The six pairs are every combination of
+  four healthy encoders, so they are not six independent observations; the
+  interval resamples encoders rather than pairs, widening it 1.22×. With
+  only four clusters it is a coarse bound rather than a precise estimate.
+  Two measurements under different protocols straddling zero at ±0.01 is
+  stronger evidence than either alone: the effect has no stable sign. An earlier version used effective rank ÷
+  ambient width as the collapse flag, misclassified SBERT (the healthiest text
+  space in the project) as degenerate, and reported the opposite verdict; the flag
+  was changed to pair-cosine, which is width-independent.
 
 ### Series H and V — tooling (`H1`, `V1`)
 
@@ -467,21 +563,80 @@ jointly-trained ceiling's 1.41.
 helps when *reading* a correspondence, hurts when *finding* one (C.12), and
 hurts again when *carrying* several spaces at once (the C.13 width cliff). The
 same geometric property, three opposite prescriptions — a property of shared
-linear coordinates as such, not of any one experiment.
+linear coordinates as such, not of any one experiment. *Note the third instance
+is an observed trade-off, not a mechanism:* the amplification account of the
+cliff was tested and falsified in C.13.11.
+
+**And a fourth instance of the C.11 rescue:** G7 found the hub repairing
+degenerate coordinate frames exactly as explicit whitening (C.11) and the
+hub-basis rescue (C.13.3) did.
+
+**A fifth independent route to the same finding.** Rebuilding the hub
+produced one diagnostic worth keeping: each encoder's held-out R² for its
+own map into the shared coordinate system. The three image encoders reach
+**0.46–0.57**; all four text spaces reach **0.02–0.05**, uniformly, with
+collapsed GPT-2 indistinguishable from healthy SBERT. The uniformity is the
+point — it is not the GPT-2 collapse restated. Nor is it an alignment
+artifact: bge-m3's row correspondence is guaranteed by file construction
+rather than inferred, and bge scores 0.020 like the rest. A whitened hub is
+very largely an image-side object, and a text space sharing a handful of
+directions with it can reach almost none of it. Same conclusion as the CCA
+measurement (6 of 64 cross-modal) and the composition results, from the
+geometry of the shared space itself. Reported in Appendix E.6.
+
+### 7.4 The falsification ledger — eight, two of them the project's own
+
+A gate that never fires is decoration; an explanation never withdrawn is
+decoration too. Each of these was proposed, tested, and recorded as false rather
+than quietly dropped.
+
+| # | Explanation | Verdict | Where |
+|---|---|---|---|
+| 1 | Collapse depresses shape correlation | FALSIFIED | C.11.2 |
+| 2 | The hub discards distinguishing directions | FALSIFIED | C.13 |
+| 3 | Reach predicts writability | FALSIFIED | C.13.4 |
+| 4 | More encoders improve transfer | FALSIFIED — 0.451 vs 0.445, CI includes zero; *unchanged* is the useful result | C.13 |
+| 5 | The ratio-to-chance decline shows agreement is local | **PARTLY THE PROJECT'S OWN** — normalisation artifact; ratio is bounded by N/k, and chance-corrected agreement *peaks* at k ≈ 20–50 | C.13.9 |
+| 6 | The width cliff is local-structure loss | FALSIFIED — smooth predictor (−0.018 / −0.030), discontinuous outcome (−0.177) | C.13.11 |
+| 7 | The width cliff is spectral amplification | **THE PROJECT'S OWN PREFERRED ACCOUNT** — FALSIFIED; 1/√λ decelerates across the cliff, 1.45× → 1.26× | C.13.11 |
+| 8 | Four further cliff statistics: accumulated noise energy, noise/signal direction ratio, condition number, shared-direction fraction | ALL FALSIFIED — D of 0.62–0.80 against transfer's 4.03 on a pre-registered discontinuity standard | K-series |
+
+Two of the eight were this project's own explanations, and #5 retracts an
+argument the report had already published. The local-over-global conclusion
+survives on CKNNA — 21 of 21 pairs higher locally than at the global limit — plus
+two further independent lines; one of four arguments was faulty and has been
+replaced by the three that are not.
 
 ## 8. Deliverables
 
 | File | Contents |
 |---|---|
-| `Final_Project_Report.pdf` (42 pp) | The full record: body, Appendix A–B, Appendix C (C.1–C.14) and Appendix D (D.1–D.5) |
-| `Technical_Cheat_Sheet.pdf` (15 pp) | Glossary, model roster with *why each model*, pooling with worked arithmetic, the GPT-2 collapse, margin/hubness/collapse diagnostics |
+| `Final_Project_Report.pdf` (64 pp) | The full record: body, Appendix A–B, Appendix C (C.1–C.14, including C.13.1–C.13.11), Appendix D (D.1–D.5) and **Appendix E — K-series addenda** (E.1–E.7, dated) |
+| `Technical_Cheat_Sheet.pdf` (21 pp) | Glossary, model roster with *why each model*, pooling with worked arithmetic, the GPT-2 collapse, margin/hubness/collapse diagnostics, A11–A16 |
+| `Results_Summary.pdf` (3 pp) | Every experiment and its result in one table, closing on the seven-falsified ledger |
 | `Status_Report.pdf` (6 pp) | What has been established, in prose |
-| `Status_One_Page.pdf` (1 p) | Every experiment in one table |
+| `Status_One_Page.pdf` (2 pp) | Every experiment in one table |
 | `Defense_Brief.pdf` (4 pp) | Assumptions, restrictions, tuning, the hard questions with answers, achievements, conclusion |
-| `Project_Atlas.pdf` (3 pp) | Navigation only: notebook → purpose → finding → report section, and the reverse lookup |
-| `Defense_Deck.pptx` (13 slides) | 15-minute presentation with speaker notes |
-| `notebooks_final.zip` | 29 notebooks, AST-validated, each with a portable storage cell |
-| Earlier editions | `Blog_Post.pdf`, `Positioning_Impact_Applications.pdf`, `B5_Sandbox_Practical_Report.pdf`, Hebrew editions — written against the original two-experiment scope |
+| `Mock_Viva.pdf` (4 pp) | 15 rehearsed Q&A with Land-on / Trap lines |
+| `Math_and_Terms.pdf` (6 pp) | Every formula in the project, worked, in ASCII |
+| `Project_Atlas.pdf` (9 pp) | Navigation: notebook → purpose → finding → report section, and the reverse lookup |
+| `Vector_Similarity_Handbook.pdf` | Background on the five levels of similarity |
+| `Blog_Post.pdf` | Narrative account, current scope |
+| `Positioning_Impact_Applications.pdf` | Literature placement (incl. Gröger 2026, CWU 2026), impact, applications |
+| `Defense_Deck.pptx` | 15-minute presentation with speaker notes — **see note below** |
+| `notebooks_final.zip` | Notebooks, AST-validated, each with a portable storage cell |
+| Earlier editions | `B5_Sandbox_Practical_Report.pdf`, Hebrew editions — written against the original two-experiment scope |
+
+> **One test deferred, recorded rather than omitted.** Benchmark B1 —
+> an ensemble of specialists against one large model — was pre-registered
+> in `Sources_and_Benchmarks` and has not been run. It is deferred for time,
+> not abandoned, and nothing in this project depends on its outcome.
+
+> **Two bookkeeping items to reconcile before submission.** (1) The notebook count
+> is quoted as 29 in one place and 31 in another; count the zip and fix both.
+> (2) The only copy of the status deck currently in the project tree is a
+> plain-text markitdown dump saved with a `.pptx` extension — not a PowerPoint
+> file. Locate the real deck or rebuild it.
 
 ## 9. Decision Gates
 
@@ -491,7 +646,7 @@ linear coordinates as such, not of any one experiment.
 | A fails | No diagonal structure / R² low | **Run H1 first.** Check power, alignment, and *target geometry* before rejecting the hypothesis |
 | B passes | Recall ≥ 90% of ceiling | Wire adapter into the shared Qdrant collection |
 | B marginal | 70–90% of ceiling | Reported honestly as marginal (F5 reached 89.0%) rather than bent to pass |
-| Hub transfer | ≥ 50% of a natively-fitted head | Achieved 93–96%; sweep width, read the transfer column before retention |
+| Hub transfer | ≥ 50% of a natively-fitted head | Achieved 93–96%; sweep width, read the **zero-shot** column, not self-transfer — self-transfer plateaus and cannot cliff |
 | Any negative | before believing it | H1's five checks; a collapsed target is a reading instruction, not an absence of structure |
 
 ## 10. Key Lessons
