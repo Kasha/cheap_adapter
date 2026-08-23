@@ -397,20 +397,22 @@ now been tested and all six falsified. It remains unexplained.
   the 93.8–96.5% within-family band, control at chance. Two limits stated with
   it: this is cross-lineage but not simultaneously cross-objective, and SigLIP 2
   is still a transformer. **A convolutional encoder has now been tested**
-  (K-series, Aug 2026): ConvNeXt-base (ImageNet-22k) reaches **87.5%** of
-  native against SigLIP 2's **86.4%** measured on the same rebuilt head.
-  That head runs ~7.8 points low against the published protocol (SigLIP's
-  original figure is 94.2%), and the cause is known rather than merely
-  noted: the original hub used **four** spaces (DINOv2 ×3 + bge-m3) with
-  per-space scaling, a random eval split, bge targets and alpha 1e-2, where
-  the reconstruction used seven raw spaces, a sequential split, SBERT
-  targets and alpha 1.0. So absolute values are not comparable to C.13.2 — but the *ordering* is, and a convnet sits at or above an encoder
-  already known to be in-band. **Architecture does not bound the claim.**
-  The confound survives: ConvNeXt is supervised where DINOv2 is
-  self-supervised, so architecture and objective move together, and given
-  C.13.5 ranks objective above lineage above modality, objective is the
-  more likely of the two. The honest form is "no encoder tested falls
-  outside the band", not "architecture is irrelevant".
+  (K-series, Aug 2026), under the *reproduced original protocol* rather
+  than an approximation of it — the reconstruction returns SigLIP 2's
+  published 94.2% to the decimal, with DINOv2-base at 96.5% against 95.9%
+  and -large at 93.8% against 92.9%, so these are levels rather than
+  orderings. **ConvNeXt-base (ImageNet-22k) reaches 96.7% of native** —
+  above the 93.8–96.5% within-family band, and above SigLIP measured in the
+  same run. A convnet, with no attention and no patch tokenisation, is the
+  best-transferring encoder in the project. Control at 0.001 = chance.
+  **Architecture does not bound the claim, and on this evidence it does not
+  cost anything either.** Three limits belong with that: ConvNeXt is
+  supervised where DINOv2 is self-supervised, so architecture and objective
+  move together and C.13.5 ranks objective the more likely driver; one
+  convnet on one corpus is not a trend; and the defensible form remains
+  "no encoder tested falls outside the band on the low side", not that
+  convolutional architectures are superior.
+
 - **G5 — the scale of agreement.** Neighbourhood overlap across all 21 pairs,
   k = 1…500. Agreement is **local**; global structure diverges. What explains it
   (exploratory): objective (+53×) > lineage (+44×) > modality (+29×), with the
