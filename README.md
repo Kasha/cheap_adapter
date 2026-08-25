@@ -4,7 +4,7 @@ A scientific experiment on representation convergence, carried through to a
 deployed engineering artifact. This document is the map: hypothesis, every
 stage as executed, results, decisions, and where each deliverable lives.
 
-**Status: complete — nine findings, nine falsified explanations, and the width cliff explained.** What began as two experiments (A and B)
+**Status: complete — nine findings, ten falsified explanations, and the width cliff explained as a numerical artifact.** What began as two experiments (A and B)
 grew into seven series. Experiments A and B established that convergence is
 linear and deployable; series C, E, F, G then tested *how far* the claim goes —
 across modalities, across model scale, without any pairing at all, and finally
@@ -359,49 +359,51 @@ wider hub can only retain more. A hub tuned for portability cannot also be a
 lossless reconstruction medium: the third independent instance of the same
 tension.
 
-**The cliff is now explained — it is a rank wall.** Eight accounts were
-tested. Seven failed, six of them the same way: each was *smooth* where the
-outcome is discontinuous. The eighth survived, and survived a prediction
-made before the measurement.
+**The cliff is EXPLAINED — and it is a numerical artifact, not a
+finding about representations.** Seven accounts were falsified; the eighth
+is confirmed to single-direction resolution on two encoders.
 
-The head is trained on `img_small`, which is **768-dimensional**, and the
-published cliff sits at 512 → 768. A d-dimensional source's ridge entry map
-is a d × W matrix, so its output spans at most **d** hub directions however
-large W becomes. Below width d the head sees every direction the hub has;
-above it the hub holds directions the source could never populate — and the
-*wider* encoders do populate them, so the head is handed coordinates it was
-never fitted on. That is an algebraic boundary, not a curve, which is
-exactly the shape all six smooth accounts lacked.
+**The mechanism.** A d-dimensional source's hub coordinates have algebraic
+rank exactly *d*. At hub width *W = d* the last retained direction is the
+vanishing one — σ = **0.0054** against **10.79** one step earlier for
+`img_small`, and **7.6e-07** against **8.73** for `img_base`. Least squares
+divides by the singular value, so the head's weights along that direction
+are enormous and meaningless; the wider test encoders have real energy
+there, and it swamps their predictions.
 
-**Predicted in advance, then measured:** each source cliffs at its own
-ambient dimension and nowhere earlier, and the location does not move with
-the head target. Six curves — three sources × two targets — and every one
-puts the largest drop exactly on the source's dimension: **768, 1536,
-2048**. DINOv2-large holds above 1.03 across nine consecutive widths from
-512 to 1920 before collapsing at 2048. Three further widths (1024, 1280,
-1792), none of them anybody's dimension, show nothing. At 1792 DINOv2-large
-reads 1.079 while DINOv2-base reads 0.098 — same hub width, opposite state,
-differing only in source dimension.
+**Resolved to one direction, not an accumulation.** Sweeping retained rank
+in steps of 8: `img_small` holds 0.874–0.894 from k=696 through k=760 and
+falls to **0.009** at k=768. `img_base` holds 0.959–0.978 through k=1528
+and falls to **0.001** at k=1536. A step, not a decline.
 
-**The mechanism was then measured directly**, not inferred from location:
-the source spans only ~768 of 1024 hub directions, the head's weight mass
-beyond 768 is near zero, the wider encoders put real variance there, and
-zeroing exactly those directions restores transfer.
+**Predicted before measuring**, on two encoders that could not have
+suggested it: each source cliffs at its own dimension and nowhere earlier,
+independent of the head target. Six curves, six hits (768, 1536, 2048).
 
-Three consequences, and they matter more than the cliff:
+**Both repairs work, as the mechanism requires.** Truncating below *d*
+drops the direction (k=700 → 0.878); ridge damps it (α=1e3 → 0.917). And
+512 is safe because at W=512 the matrix has full rank 512 with every
+direction well-conditioned.
 
-1. **512 was never a tuned operating point.** Any width up to the source
-   encoder's dimension works, nothing above it can. The rule is
-   `hub_width ≤ dim(source encoder)` — stated, not swept for.
-2. **The portability/losslessness tension is narrower than reported.** It
-   exists because the head was fitted on the *narrowest* encoder in the
-   set. Train it on `img_large` and the ceiling is 2048.
-3. **The meta-finding drops from three instances to two.** The first two
-   are about isotropy; this one is about rank. They are not the same
-   property.
+**Three corrections to the body of this report follow:**
 
-Scope: one hub protocol, one image corpus, three source encoders of one
-family, two head targets. Full account in Appendix E.8.
+1. **The portability/losslessness reading of the cliff does not survive.**
+   There is no trade-off to make, only a singular value to avoid dividing
+   by. The meta-finding counts **two** instances of the isotropy trade-off,
+   not three.
+2. **512 was never tuned.** Any width strictly below the source's rank is
+   safe — `hub_width < dim(source encoder)` — and the constraint lifts
+   entirely under a truncated or regularised head.
+3. **"Alpha cannot substitute for width" needs narrowing.** That was
+   measured on the *entry-map* alpha. The **head's** alpha was never swept,
+   and at α=1e3 transfer at width 1024 recovers to 0.917.
+
+*Two errors of mine are recorded rather than quietly fixed:* an earlier
+test compared entropy-based effective rank (573.7) against a prediction
+about *algebraic* rank (768) — different quantities — and its ablation
+zeroed the test encoders' coordinates rather than removing the direction
+from the head's fit. The account was entered in the ledger on that basis
+and has been withdrawn from it. Full record in Appendix E.8.
 
 - **G2** — live demo: real COCO images, URL / upload / local path input, GPU
   used only for the fresh forward pass (the hub itself is a CPU linear solve).
@@ -605,7 +607,7 @@ directions with it can reach almost none of it. Same conclusion as the CCA
 measurement (6 of 64 cross-modal) and the composition results, from the
 geometry of the shared space itself. Reported in Appendix E.6.
 
-### 7.4 The falsification ledger — nine, two of them the project's own
+### 7.4 The falsification ledger — ten, two of them the project's own
 
 A gate that never fires is decoration; an explanation never withdrawn is
 decoration too. Each of these was proposed, tested, and recorded as false rather
@@ -622,8 +624,9 @@ than quietly dropped.
 | 7 | The width cliff is spectral amplification | **THE PROJECT'S OWN PREFERRED ACCOUNT** — FALSIFIED; 1/√λ decelerates across the cliff, 1.45× → 1.26× | C.13.11 |
 | 8 | Four further cliff statistics: accumulated noise energy, noise/signal direction ratio, condition number, shared-direction fraction | ALL FALSIFIED — D of 0.39–0.88 against transfer's 4.03 on a pre-registered discontinuity standard; each smooth where the outcome is discontinuous | E.3 |
 | 9 | The cliff sits at the head *target's* dimension | FALSIFIED by a wrong prediction, not by wrong shape — the location does not move between bge (1024-d) and SBERT (768-d) | E.3 |
+| 10 | The cliff is an accumulation of ill-conditioned directions | FALSIFIED — the collapse is a step at one direction, not a decline across many: transfer holds to k=760 then falls to 0.009 at k=768 | E.8 |
 
-Two of the nine were this project's own explanations, and #5 retracts an
+Two of the ten were this project's own explanations, and #5 retracts an
 argument the report had already published. The local-over-global conclusion
 survives on CKNNA — 21 of 21 pairs higher locally than at the global limit — plus
 two further independent lines; one of four arguments was faulty and has been
