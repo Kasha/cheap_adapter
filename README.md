@@ -13,9 +13,13 @@ characterised as a manifold and probed for what the hub does and does not do.
 Series H
 and V are tooling that certify the measurements.
 
-All experiments ran on Google Colab (T4/L4); the adapter is exported as a Core
-ML package; every map in the project is a closed-form linear solve and no
-pretrained weight was ever modified.
+The only GPU-bound step is the one-time encoding pass that produces the
+representation caches — running the eight encoders forward over 9,533 items
+on Google Colab (T4/L4). Everything after that is closed-form linear algebra
+that runs on CPU: the ridge maps, the hub, and all transfer. The expensive
+hardware builds the raw material once; the science runs without it. The
+adapter is exported as a Core ML package, and no pretrained weight was ever
+modified.
 
 ---
 
