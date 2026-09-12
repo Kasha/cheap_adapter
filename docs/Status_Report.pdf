@@ -2185,7 +2185,7 @@ endobj
 endobj
 
 51 0 obj
-<</Type/Page/Contents[54 0 R 56 0 R]/Resources<</Font<</F1 48 0 R/F2 49 0 R/Helvetica 55 0 R>>>>/MediaBox[0 0 595.2756 841.8898]/Rotate 0/Parent 2 0 R/Annots[]>>
+<</Type/Page/Contents[59 0 R 61 0 R]/Resources<</Font<</F1 48 0 R/F2 49 0 R/Helvetica 60 0 R>>>>/MediaBox[0 0 595.2756 841.8898]/Rotate 0/Parent 2 0 R/Annots[]>>
 endobj
 
 52 0 obj
@@ -2218,8 +2218,38 @@ x⁄„*‰r
 endstream
 endobj
 
+57 0 obj
+<</Type/Annot/Subtype/Redact/P 51 0 R/F 4/Rect[105.204288 637.9004 129.57289 644.54507]/AP<</N 58 0 R>>/NM(fitz-A0)>>
+endobj
+
+58 0 obj
+<</Type/XObject/Subtype/Form/BBox[105.204288 637.9004 129.57289 644.54507]/Matrix[1 0 0 1 0 0]/Length 78/Filter/FlateDecode>>
+stream
+x⁄3T0 ¬ w.C3=##3c=KÖ\.C#=Ss#KÑ`≤†â±û©â©Å9H… da¨&≤áπHj±€ òı(Ó
+endstream
+endobj
+
+59 0 obj
+<</Length 2284>>
+stream
+q 1 0 0 1 51.35433 767.7701 cm 0 0 0 rg BT .897296 Tw/F1 9.3 Tf 0 16.3 TD (while retrieval runs at 9.5%. No similarity number is interpretable before the anisotropy battery is run - a caution that)Tj 0 Tw 0 -12.8 TD (applies to the PRH literature's own metrics.)Tj ET Q q 1 0 0 1 51.35433 743.7701 cm .101961 .101961 .180392 rg BT/F2 12 Tf 0 3 TD (Methodological failures caught and converted)Tj ET Q q 1 0 0 1 51.35433 675.7701 cm 0 0 0 rg BT .818502 Tw/F1 9.3 Tf 0 54.7 TD (Run-1 sample starvation \(5.9 rows/dim\) -> the >=5 rule and the power gate; synthetic hot-diagonal figure -> replaced)Tj .919064 Tw 0 -12.799999 TD (with the real hub-dominated matrix and an honesty note; mismatched E1 ceiling \(borrowed direction and protocol\) ->)Tj .084313 Tw T* (measured matched ceiling, verdict corrected 55.2% -> 40.9%; wrong teacher checkpoint in F1 \(SigLIP 1 vs 2\) -> caught)Tj 1.018458 Tw T* (by a transfer check against existing artifacts, now automated; premature 'gate passed' claim -> refuted by expanded)Tj 0 Tw 0 -12.8 TD (paired evaluation \(F5\). Each failure produced a reusable guard now built into the notebooks.)Tj ET Q q 1 0 0 1 51.35433 651.7701 cm .101961 .101961 .180392 rg BT/F2 12 Tf 0 3 TD (Deliverables)Tj ET Q q 1 0 0 1 51.35433 596.5701 cm 0 0 0 rg BT .718779 Tw/F1 9.3 Tf 0 41.9 TD (Final report \()Tj[-2579.2896]TJ (, appendices C-D\) - Concepts & Corrections - Project Atlas - Vector Similarity Handbook - defense)Tj 1.082635 Tw 0 -12.799999 TD (deck + cheat sheets - 25 runnable Colab notebooks \(A1-F5\) including V1, a reusable structure/semantics diagnostic)Tj .512629 Tw T* (battery for any [n, d] representation - deployed artifact: 0.79 MB fp16 adapter, shared Qdrant index, 39 ms end-to-end)Tj 0 Tw 0 -12.8 TD (demo path.)Tj ET Q q 1 0 0 1 51.35433 572.5701 cm .101961 .101961 .180392 rg BT/F2 12 Tf 0 3 TD (Open items)Tj ET Q q 1 0 0 1 51.35433 530.1701 cm 0 0 0 rg BT .000919 Tw/F1 9.3 Tf 0 29.1 TD (E1.2 isotropy-rescue run \(embeddings ready, minutes\); E1 scale sweep \(dinov2-small/base/large with capacity controls\))Tj .593891 Tw 0 -12.800001 TD (- would turn the two-point PRH sample into a slope; F3/F4 if moving the ceiling is ever worth trading the seconds-refit)Tj 0 Tw 0 -12.8 TD (property; E3 internal-splice scaffold.)Tj ET Q q Q
+endstream
+endobj
+
+60 0 obj
+<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>
+endobj
+
+61 0 obj
+<</Length 90/Filter/FlateDecode>>
+stream
+x⁄„*‰r
+·2T0 BCCS=S#K3c=CCSÖê\.}è‘ú≤‘íÃ‰DK=cÖê4∞jÖ w(£(]!⁄∆ÿ‹ÿ¿»¿ÌbCº∏\C∏π ¿¿¥
+endstream
+endobj
+
 xref
-0 57
+0 62
 0000000000 65535 f 
 0000000042 00000 n 
 0000000120 00000 n 
@@ -2277,9 +2307,14 @@ xref
 0000332861 00000 n 
 0000335197 00000 n 
 0000335287 00000 n 
+0000335445 00000 n 
+0000335580 00000 n 
+0000335819 00000 n 
+0000338155 00000 n 
+0000338245 00000 n 
 
 trailer
-<</Size 57/Root 1 0 R/ID[<C3A00C5177606C0DC385C3B0C39929C3><2853C7DBBCE7952208469EE817F19D29>]>>
+<</Size 62/Root 1 0 R/ID[<C3A00C5177606C0DC385C3B0C39929C3><F11E6C529DEB1292810274CFA8E44B08>]>>
 startxref
-335445
+338404
 %%EOF
