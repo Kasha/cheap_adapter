@@ -661,6 +661,19 @@ replaced by the three that are not.
 > in `Sources_and_Benchmarks` and has not been run. It is deferred for time,
 > not abandoned, and nothing in this project depends on its outcome.
 
+> **Row alignment across caches is positional, never by id — read this before
+> joining caches.** Two `keep` conventions coexist. The E1.1-era caches
+> (DINOv2 small/base/large, and `hub_ids` in `hub_rebuilt.npz`, which is
+> derived from them) store the *request position* 0…N−1 — `arange`, carrying
+> no image identity. The G4-era caches (SigLIP 2, ConvNeXt) store real COCO
+> image ids. An id join across the two groups is meaningless: the 1,879
+> "overlap" between them is just the count of COCO ids that happen to fall
+> below 9,533 (documented in `G4_convnext`). Rows nonetheless align, because
+> every cache was written by the same deterministic loop over
+> `sorted(set(caps) & set(url))[:N]`. Verify alignment the way `G4_convnext`
+> and `H1` do — a ridge or Spearman between two caches must vastly exceed the
+> same statistic under a row shuffle — and never by comparing `keep` values.
+
 > **Two bookkeeping items to reconcile before submission.** (1) The notebook count
 > is quoted as 29 in one place and 31 in another; count the zip and fix both.
 > (2) The only copy of the status deck currently in the project tree is a
