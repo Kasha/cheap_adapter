@@ -722,7 +722,7 @@ than quietly dropped.
 | 8 | Four further cliff statistics: accumulated noise energy, noise/signal direction ratio, condition number, shared-direction fraction | ALL FALSIFIED — D of 0.39–0.88 against transfer's 4.03 on a pre-registered discontinuity standard; each smooth where the outcome is discontinuous | E.3 |
 | 9 | The cliff sits at the head *target's* dimension | FALSIFIED by a wrong prediction, not by wrong shape — the location does not move between bge (1024-d) and SBERT (768-d) | E.3 |
 | 10 | The cliff is an accumulation of ill-conditioned directions | FALSIFIED — the collapse is a step at one direction, not a decline across many: transfer holds to k=760 then falls to 0.009 at k=768 | E.8 |
-| 11 | Fractal training produces recoverable shared structure | FALSIFIED — fractal transfer at the floor (0.014/0.020), indistinguishable from random twin; no training-specific advantage beyond random init | G10, F.4 |
+| 11 | Fractal geometry is recoverable through the hub | FALSIFIED — visible geometry exists (R ≈ 0.09–0.21, P2 confirmed) but does not transfer into a semantic function: hub R@1 at the floor (0.014/0.020), indistinguishable from random init | G9 (geometry confirmed), G10 (transfer falsified) |
 
 Two of the eleven were this project's own explanations, and #5 retracts an
 argument the report had already published. The local-over-global conclusion
