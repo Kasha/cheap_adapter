@@ -1,17 +1,29 @@
 # Representation Convergence — Full Project Guide (English)
 
-A scientific experiment on representation convergence, carried through to a
-deployed engineering artifact. This document is the map: hypothesis, every
-stage as executed, results, decisions, and where each deliverable lives.
+Do independently trained models discover the same world — and can one
+matrix move knowledge between them?
 
-**Status: complete — nine findings, ten falsified explanations, and the width cliff explained as a numerical artifact.** What began as two experiments (A and B)
-grew into seven series. Experiments A and B established that convergence is
-linear and deployable; series C, E, F, G then tested *how far* the claim goes —
-across modalities, across model scale, without any pairing at all, and finally
-into a single shared coordinate system serving seven encoders at once, then
-characterised as a manifold and probed for what the hub does and does not do.
-Series H
-and V are tooling that certify the measurements.
+A scientific experiment on representation convergence, carried through to a
+deployed engineering artifact, then extended with a fractal probe that asks
+whether convergence requires *natural-world data*. This document is the map:
+hypothesis, every stage as executed, results, decisions, and where each
+deliverable lives.
+
+**Status: complete — nine findings, eleven falsified explanations, the width
+cliff explained as a numerical artifact, and a post-defense fractal probe
+(G8–G10) confirming that structured synthetic training creates limited shared
+geometry but does not produce a training-specific transfer advantage.**
+What began as two experiments (A and B) grew into seven series plus a
+post-defense fractal thread. Experiments A and B established that convergence
+is linear and deployable; series C, E, F, G then tested *how far* the claim
+goes — across modalities, across model scale, without any pairing at all, and
+finally into a single shared coordinate system serving seven encoders at once.
+Series G8–G10 test whether the shared structure needs natural images, by
+measuring FractalDB-trained encoders against the full eight-encoder roster.
+Series H and V are tooling that certify the measurements.
+
+**Liad Kashanovsky · AI Expert final project · Viva 17 September 2026 ·
+8 encoders · 9 findings · 11 falsified explanations · 2 shipped artifacts**
 
 The only GPU-bound step is the one-time encoding pass that produces the
 representation caches — running the eight encoders forward over 9,533 items
@@ -483,6 +495,73 @@ and has been withdrawn from it. Full record in Appendix E.8.
   space in the project) as degenerate, and reported the opposite verdict; the flag
   was changed to pair-cosine, which is width-independent.
 
+### Series G8–G10 — training-free similarity and the fractal probe (post-defense)
+
+Three notebooks added after the defense (September 2026), continuing as
+ongoing research. They ask a sharper version of PRH's "well-trained" clause:
+*is it the data?* — by training vision models on **fractals only** (FractalDB-1k:
+1M rendered fractals, zero natural images) and asking how much shared structure
+survives.
+
+**G8 — training-free similarity suite** (`G8_similarity_suite.ipynb`).
+Four map-free metrics (mutual k-NN, debiased CKA, relative representations,
+Spearman shape-ρ) across all eight encoders, raw and whitened, each with a
+shuffle control. Reproduces the cross-modal raw shape-ρ mean of **0.288**
+(healthy-only 0.329 over 12 pairs excluding GPT-2; bge–SBERT tightest at
+0.77). Whitening collapses cross-modal agreement from 0.288 → 0.062 — the
+C.11/C.12 reading-vs-finding tension in a third form.
+
+**G9 — fractal models vs the eight encoders** (`G9_fractal_vs_8_encoders.ipynb`).
+Two FractalDB-1k models (ResNet-50, DeiT-tiny) measured by shape-ρ against all
+eight encoders, bracketed by random-init and ImageNet-1k twins plus a pixel
+floor. Reality fraction R = (ρ_fractal − ρ_random)/(ρ_natural − ρ_random).
+Pipeline VERIFIED against the published ConvNeXt row and bge–SBERT 0.768.
+
+| prediction | CNN | ViT |
+|---|---|---|
+| P1 fractal < ImageNet twin | CONFIRMED 8/8 | CONFIRMED 8/8 |
+| P2 fractal > random twin | CONFIRMED 4/4 | CONFIRMED 4/4 |
+| P3 image-vs-text R asymmetry | INCONCLUSIVE | INCONCLUSIVE |
+| P5 fractal > pixels (raw) | FALSIFIED 0/4 | CONFIRMED 4/4 |
+
+Reality fraction R ≈ **0.09** (CNN) / **0.21** (ViT). After held-out whitening
+(fit on 8,533 train, measure on 1,000 held-out), the fractal CNN clears
+whitened controls: P5w CONFIRMED 4/4, R_white ≈ 11%. P3 is INCONCLUSIVE
+under item-level paired bootstrap (CIs straddle zero for both architectures).
+
+*Preprocessing confound control (`rand_cnn_fnorm`)*: the random CNN twin used
+ImageNet normalization while the fractal CNN uses repo norm (mean 0.2, std 0.5).
+A matched-norm control resolves it: rand_cnn 0.032 (ImageNet norm) → 0.036
+(FractalDB norm) → frac_cnn 0.067. The norm accounts for ~10% of the apparent
+signal; ~90% is genuine training. P2-cnn holds, corrected.
+
+**G10 — hub entry-map recoverability** (`G10_fractal_hub_transfer.ipynb`).
+G9 measures *visible* structure (raw geometry). G10 measures *recoverable*
+structure: fitted entry map → frozen 512-d hub → frozen caption head (trained
+on DINOv2-small) → bge retrieval R@1. Reproduction gate VERIFIED (img_base
+94.8%, img_large 93.4% of native, control at chance).
+
+| space | transfer R@1 | native R@1 | random twin |
+|---|---|---|---|
+| fractal CNN | 0.014 | 0.014 | 0.012 — tied |
+| fractal ViT | 0.020 | 0.022 | 0.017 — tied |
+| ImageNet CNN | 0.258 | 0.274 | — |
+| ImageNet ViT | 0.204 | 0.208 | — |
+
+Fractal transfer sits **at the floor** (effective floor 0.050), indistinguishable
+from its random twin. **H1 FALSIFIED** both architectures; '% of native' reads
+~100% only because the native head is also at the floor (ratio of two near-zero
+numbers, guarded as **NOT MEANINGFUL**). Natural-image encoders clear the floor
+at 0.20–0.26 (H2 CONFIRMED). Precise conclusion: under the frozen hub/head
+protocol, FractalDB encoders show **no demonstrated training-specific transfer
+advantage beyond random initialization**.
+
+**The G8–G10 story in one line:** structured synthetic training creates a small
+amount of visible shared geometry (more in the ViT, and in the CNN only after
+de-anisotropization), but natural-image training creates much more, and that
+weak fractal geometry does **not** become a training-specific advantage in
+semantic caption retrieval through the shared hub.
+
 ### Series H and V — tooling (`H1`, `V1`)
 
 Not experiments. `H1` (formerly `D1`; renamed because Appendix D of the report
@@ -514,6 +593,10 @@ Cross-modal:    E1 → E1.1 → E1.2 → E1.3    (E1 encodes; the rest reuse its
 Contrast:       F1 → F2 → F5               (F3 stays gated)
 Pair-free:      C1.1                       (C1 kept for the comparison)
 Shared hub:     G1 → G2 → G3               (reads cached vectors; seconds)
+
+Fractal probe:  G8                          (reads roster caches; ~3 min)
+                G9                          (downloads crops + checkpoints; ~15 min full, or warm from §14)
+                G10                         (reads G9 caches; ~2 min)
 
 Tooling:        H1 (before believing a negative), V1 (any space, any time)
 ```
@@ -611,7 +694,17 @@ directions with it can reach almost none of it. Same conclusion as the CCA
 measurement (6 of 64 cross-modal) and the composition results, from the
 geometry of the shared space itself. Reported in Appendix E.6.
 
-### 7.4 The falsification ledger — ten, two of them the project's own
+**Post-defense: the fractal thread adds one more falsification and four
+implications.** G9 establishes that fractal-only training installs measurable
+but limited shared geometry (R ≈ 9–21%). G10 shows that geometry does *not*
+become a training-specific transfer advantage through the hub — H1 falsified,
+H3 not meaningful. Together they support four implications: (1) check isotropy
+before believing a failure; (2) visible ≠ recoverable — raw agreement does not
+bound what a fitted map can extract; (3) there is no single "good geometry" —
+whitening's prescription inverts with the task; (4) convergence is local, and
+the hypothesis holds in its narrow form, not its universal one.
+
+### 7.4 The falsification ledger — eleven, two of them the project's own
 
 A gate that never fires is decoration; an explanation never withdrawn is
 decoration too. Each of these was proposed, tested, and recorded as false rather
@@ -629,8 +722,9 @@ than quietly dropped.
 | 8 | Four further cliff statistics: accumulated noise energy, noise/signal direction ratio, condition number, shared-direction fraction | ALL FALSIFIED — D of 0.39–0.88 against transfer's 4.03 on a pre-registered discontinuity standard; each smooth where the outcome is discontinuous | E.3 |
 | 9 | The cliff sits at the head *target's* dimension | FALSIFIED by a wrong prediction, not by wrong shape — the location does not move between bge (1024-d) and SBERT (768-d) | E.3 |
 | 10 | The cliff is an accumulation of ill-conditioned directions | FALSIFIED — the collapse is a step at one direction, not a decline across many: transfer holds to k=760 then falls to 0.009 at k=768 | E.8 |
+| 11 | Fractal training produces recoverable shared structure | FALSIFIED — fractal transfer at the floor (0.014/0.020), indistinguishable from random twin; no training-specific advantage beyond random init | G10, F.4 |
 
-Two of the ten were this project's own explanations, and #5 retracts an
+Two of the eleven were this project's own explanations, and #5 retracts an
 argument the report had already published. The local-over-global conclusion
 survives on CKNNA — 21 of 21 pairs higher locally than at the global limit — plus
 two further independent lines; one of four arguments was faulty and has been
@@ -640,21 +734,24 @@ replaced by the three that are not.
 
 | File | Contents |
 |---|---|
-| `Final_Project_Report.pdf` (64 pp) | The full record: body, Appendix A–B, Appendix C (C.1–C.14, including C.13.1–C.13.11), Appendix D (D.1–D.5) and **Appendix E — K-series addenda** (E.1–E.7, dated) |
+| `Final_Project_Report.pdf` (84 pp) | The full record: body §1–5, References, Appendix A–E, **Appendix F — fractal probe (G8–G10, post-defense, F.0–F.7)**, **Appendix G — Resources and links** with clickable URLs. TOC on p. 2 with internal links |
+| `Project_Atlas.pdf` (16 pp) | Navigation: notebook → purpose → finding → report section. **Section 10 — fractal probe**, four implications, model roster. TOC on p. 2. Page-9 table fixed |
+| `G8_G9_G10_Summary.pdf` (10 pp) | All three fractal notebooks: verified results, corrected verdicts, real-cache figures |
 | `Technical_Cheat_Sheet.pdf` (21 pp) | Glossary, model roster with *why each model*, pooling with worked arithmetic, the GPT-2 collapse, margin/hubness/collapse diagnostics, A11–A16 |
-| `Results_Summary.pdf` (3 pp) | Every experiment and its result in one table, closing on the seven-falsified ledger |
+| `Results_Summary.pdf` (3 pp) | Every experiment and its result in one table, closing on the falsification ledger |
 | `Status_Report.pdf` (6 pp) | What has been established, in prose |
 | `Status_One_Page.pdf` (2 pp) | Every experiment in one table |
 | `Defense_Brief.pdf` (4 pp) | Assumptions, restrictions, tuning, the hard questions with answers, achievements, conclusion |
 | `Mock_Viva.pdf` (4 pp) | 15 rehearsed Q&A with Land-on / Trap lines |
 | `Math_and_Terms.pdf` (6 pp) | Every formula in the project, worked, in ASCII |
-| `Project_Atlas.pdf` (9 pp) | Navigation: notebook → purpose → finding → report section, and the reverse lookup |
 | `Vector_Similarity_Handbook.pdf` | Background on the five levels of similarity |
 | `Blog_Post.pdf` | Narrative account, current scope |
 | `Positioning_Impact_Applications.pdf` | Literature placement (incl. Gröger 2026, CWU 2026), impact, applications |
-| `Defense_Deck.pptx` | 15-minute presentation with speaker notes — **see note below** |
-| `notebooks_final.zip` | Notebooks, AST-validated, each with a portable storage cell |
-| Earlier editions | `B5_Sandbox_Practical_Report.pdf`, Hebrew editions — written against the original two-experiment scope |
+| `Defense_Deck.pptx` | 15-minute presentation with speaker notes |
+| **G8–G10 Colab notebooks** | |
+| `G8_similarity_suite.ipynb` (32 cells) | Four training-free metrics × 8 encoders, raw + whitened, shuffle controls |
+| `G9_fractal_vs_8_encoders.ipynb` (52 cells) | FractalDB-1k ResNet-50 + DeiT vs roster; brackets, R, P1–P5, whitening rescue, `rand_cnn_fnorm` confound control |
+| `G10_fractal_hub_transfer.ipynb` (27 cells) | Hub entry-map recoverability with floor guard; H1/H2/H3 verdicts |
 
 > **One test deferred, recorded rather than omitted.** Benchmark B1 —
 > an ensemble of specialists against one large model — was pre-registered
@@ -718,8 +815,16 @@ replaced by the three that are not.
    starvation, preprocessing mismatch, un-refitted adapters after quantization
    and collapsed target spaces all fail quietly. Guardrails and parity checks,
    not vigilance.
+8. **Visible is not recoverable.** A low RSA/CKA/ρ is not evidence that two
+   models cannot be aligned — ConvNeXt has the lowest raw agreement and the
+   highest hub transfer. But when structure is genuinely absent, a fitted map
+   correctly finds nothing (fractal encoders at the floor in G10). Measure both.
+9. **Natural-world data does real work.** Fractals install ~10–20% of what
+   natural images give, and that geometry does not become a semantic transfer
+   advantage. The "same reality" clause in PRH is load-bearing.
 
 ---
 
 *Nine findings, five documented self-corrections reached by measurement rather
-than argument, and a theory that survived its own out-of-sample test.*
+than argument, a theory that survived its own out-of-sample test, and a
+post-defense fractal probe that confirmed the data-driven mechanism.*
