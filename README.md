@@ -25,6 +25,13 @@ Series H and V are tooling that certify the measurements.
 **Liad Kashanovsky · AI Expert final project · Viva 17 September 2026 ·
 8 encoders · 9 findings · 11 falsified explanations · 2 shipped artifacts**
 
+> **Reference note:** all section numbers (§1–6), appendix references (A–G),
+> and experiment identifiers (C.8, C.11, E.2, E.16, etc.) throughout this
+> README refer to the
+> [Final Project Report](https://drive.google.com/file/d/1kcBq-VN_rH6YoiwzkmU_qIiM10k5qY0C/view?usp=sharing)
+> (84 pages, PDF). The report is the authoritative source for every number
+> quoted here.
+
 The only GPU-bound step is the one-time encoding pass that produces the
 representation caches — running the eight encoders forward over 9,533 items
 on Google Colab (T4/L4). Everything after that is closed-form linear algebra
