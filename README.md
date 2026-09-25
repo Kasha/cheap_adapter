@@ -312,6 +312,29 @@ the sharper result: **isotropy is necessary but not sufficient.** Whitening
 fixes how many directions carry variance; it cannot install which directions
 carry meaning. (Report C.14.)
 
+**E.16 — scale extension: does alignment strengthen with capacity?**
+(`convergence_scale_extension.ipynb`). DINOv2-giant (1.14B, 3,072-d cls+patch)
+and Qwen3-Embedding-4B added to matched capacity ladders. Predictions
+**pre-registered before any measurement** (Cell 2, written to disk). Results:
+
+| prediction | threshold | measured | verdict |
+|---|---|---|---|
+| P2 giant shape ρ | ≥ 0.418 | 0.339 | **FALSIFIED** |
+| P3 Qwen-4B shape ρ | ≥ 0.320 | 0.307 | **FALSIFIED** |
+
+Both ladders rise then fall: DINOv2 s → b → l climbs 0.381 → 0.381 → 0.418,
+then **drops to 0.339 at giant**. The text ladder similarly **drops to 0.307 at
+Qwen-4B**. A pooling diagnostic confirmed the drop is real (cls-only 0.238 vs
+cls+patch 0.339 — both below large's 0.418). Naive "more capacity → more
+alignment" is **not supported** at this scale. The 11-encoder extended shape
+matrix is saved as `rho_matrix_extended.npz`. (Report E.16.)
+
+**Companion: `convergence_figures.ipynb`** produces three viva-ready figures
+from the raw cached vectors: (1) item-level PCA scatter showing same-item
+pairing across encoders, (2) the 8-encoder shape-agreement heatmap (ρ = 0.768
+bge–SBERT, matching the report to the decimal), (3) k-NN overlap histogram
+(67% mean neighbourhood overlap). Outputs saved to `figs_for_claude/` on Drive.
+
 ### Series F — the contrast condition (`F1`–`F5`)
 
 Where E trains nothing, F deliberately trains, to test whether more capacity or
@@ -590,6 +613,8 @@ Validation:     B5 → B6                    (~4 min + interactive)
 Quantization:   B7, B8, B9                 (independent)
 
 Cross-modal:    E1 → E1.1 → E1.2 → E1.3    (E1 encodes; the rest reuse its cache)
+Scale ext:      convergence_scale_extension  (encodes giant + Qwen; ~20 min GPU)
+Figures:        convergence_figures          (reads caches; seconds)
 Contrast:       F1 → F2 → F5               (F3 stays gated)
 Pair-free:      C1.1                       (C1 kept for the comparison)
 Shared hub:     G1 → G2 → G3               (reads cached vectors; seconds)
@@ -662,7 +687,7 @@ jointly-trained ceiling's 1.41.
 | 2 | Related, not rigid | Procrustes 0.038 vs ridge 0.592; 69× knob spread | §4 |
 | 3 | Deployable | 95% of ceiling at 0.79 MB; verification AUC 0.999 | §4, D.2 |
 | 4 | Cross-modal without joint training | 40.9% of a matched ceiling, 358× chance | C.8 |
-| 5 | Alignment scales with capacity | +15.3 pts per decade, six monotone measures | C.10 |
+| 5 | Alignment scales with capacity | +15.3 pts per decade, six monotone measures; **E.16: not monotonic beyond this range** (giant and Qwen-4B both FALSIFIED) | C.10, E.16 |
 | 6 | Isotropy, not similarity training | whitening → 102.6% / 101.4% at two scales | C.11 |
 | 7 | The correspondence is self-identifying | GW 39.7% exact = 595× chance, zero pairs | C.12 |
 | 8 | One shared space, used | hub transfer 93–96% of native on unseen encoders | C.13 |
@@ -752,6 +777,9 @@ replaced by the three that are not.
 | `G8_similarity_suite.ipynb` (32 cells) | Four training-free metrics × 8 encoders, raw + whitened, shuffle controls |
 | `G9_fractal_vs_8_encoders.ipynb` (52 cells) | FractalDB-1k ResNet-50 + DeiT vs roster; brackets, R, P1–P5, whitening rescue, `rand_cnn_fnorm` confound control |
 | `G10_fractal_hub_transfer.ipynb` (27 cells) | Hub entry-map recoverability with floor guard; H1/H2/H3 verdicts |
+| **Scale extension and figures** | |
+| `convergence_scale_extension.ipynb` (12 cells) | E.16: DINOv2-giant + Qwen-4B vs the roster, pre-registered predictions, both ladders FALSIFIED |
+| `convergence_figures.ipynb` (4 cells) | Three viva-ready figures from raw cached vectors: PCA scatter, shape-agreement heatmap, k-NN overlap histogram |
 
 > **One test deferred, recorded rather than omitted.** Benchmark B1 —
 > an ensemble of specialists against one large model — was pre-registered
